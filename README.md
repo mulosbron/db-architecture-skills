@@ -1,98 +1,94 @@
-# 🗄️ Database Architect Skills for AI Agents
+# Database Architect Skills
 
-> **Transform your LLM coding and design assistant into an expert Database Architect.**
+Skill files that turn an AI coding agent into a database architect for two jobs:
 
-A production-ready suite of specialized AI agent skills for designing, auditing, and optimizing database architectures. From relational database modeling and NoSQL scaling to vector search and ORM best practices, these skills turn your AI into a seasoned DBA and Data Architect.
+1. **Improve an existing database**: find missing constraints, wrong types, missing indexes, slow queries, unsafe migrations.
+2. **Design a database from scratch**: pick the technology, model the schema, write the first migration.
 
----
+Every file follows one rule: it contains only what the model cannot know on its own. Project preferences, sharp prohibitions, Postgres traps the model keeps missing, and the instruction to fetch live docs instead of guessing. No tutorials, no capability lists, no "you are a world-class DBA". The whole set is about 450 lines.
 
-## 🌟 Key Features
+## Install
 
-- 🏗️ **Greenfield Design**: Step-by-step guidance for technology selection (SQL vs NoSQL vs Vector), schema design, and normalization.
-- 🔍 **Database Auditing**: Proactive scanning for missing constraints, N+1 query problems, and architectural anti-patterns.
-- 🐘 **PostgreSQL Mastery**: Deep dives into advanced PostgreSQL features, performance tuning, and serverless Postgres (Neon).
-- 🔄 **Migration & Evolutions**: Strategies for zero-downtime schema migrations and ETL processes.
-- 🔌 **ORM & Tooling Integration**: Expert guidance for Prisma, Drizzle ORM, and raw SQL optimization.
-
----
-
-## 📚 Included Skills
-
-| Skill | Directory | Primary Use Cases |
-|-------|-----------|-------------------|
-| **Database Fundamentals** | database/SKILL.md | Core concepts like ACID, BASE, CAP Theorem, and RDB constraints. |
-| **Database Architect** | database-architect/SKILL.md | Selecting database technologies, planning scaling, and partitioning strategies. |
-| **Database Design** | database-design/SKILL.md | Conceptual, logical, and physical schema modeling and normalization. |
-| **Database Migration** | database-migration/SKILL.md | Planning zero-downtime schema changes and data migrations. |
-| **Database Admin (DBA)** | database-admin/SKILL.md | Backup strategies, security, role-based access, and operational maintenance. |
-| **PostgreSQL Expert** | postgresql/SKILL.md | Advanced Postgres usage, JSONB, text search, and indexing. |
-| **Postgres Best Practices** | postgres-best-practices/SKILL.md | Supabase and Postgres performance rules and query optimization. |
-| **SQL Pro** | sql-pro/SKILL.md | Writing advanced raw SQL, window functions, and complex aggregations. |
-| **NoSQL Expert** | nosql-expert/SKILL.md | Designing for MongoDB, DynamoDB, Cassandra, and document stores. |
-| **Vector DB Engineer** | vector-database-engineer/SKILL.md | Semantic search architectures using Pinecone, Qdrant, Milvus, and pgvector. |
-| **Prisma Expert** | prisma-expert/SKILL.md | Schema-first ORM modeling, relations, and migration generation. |
-| **Drizzle ORM Expert** | drizzle-orm-expert/SKILL.md | Code-first SQL-like ORM configuration and type-safe query building. |
-| **Using Neon** | using-neon/SKILL.md | Serverless Postgres branching, auto-scaling, and bottomless storage. |
-
----
-
-## ⚡ Quick Start
-
-### 1. Copy to Your Project
-
-Clone or copy the db-architect-skills directory into your .agents or project root:
+Copy the folder into your project (or your global agents directory) so the agent finds `AGENTS.md`:
 
 ```bash
 cp -r db-architect-skills/ my-project/.agents/
 ```
 
-### 2. Prompt Your AI Assistant
+Agents that read `AGENTS.md` (Claude Code, Codex, Cursor, Windsurf and others) pick up the skill table and load individual skills on demand.
 
-Open your AI coding assistant in the project directory and ask directly:
+## How it works
 
-```text
-"Act as a Database Architect. Audit my current schema.prisma file and tell me if there are any missing indexes or normalization issues."
-```
+`AGENTS.md` tells the agent to **ask before building**. On a database request it first asks what it does not already know (greenfield or existing, load profile, consistency needs, ORM preference, deployment target), then scans the workspace for `schema.prisma`, `drizzle.config.ts`, `.sql` files and migrations, and only then proposes. You can skip the interview by answering those questions in your first prompt.
 
-```text
-"Design a highly scalable NoSQL database schema for a real-time chat application."
-```
+The agent will not edit schema or migration files unless you ask, and will not propose destructive commands against a database that might be production without a confirmation step.
 
----
+## Skills
 
-## 🛠️ Architecture
+| Skill | Use it for |
+|---|---|
+| `database-architect/` | Technology and ORM choice, scaling, caching. Greenfield entry point. |
+| `database-design/` | Schema modeling and schema audit checklist. |
+| `postgresql/` | Postgres types, traps, constraints, indexes, partitioning, JSONB. |
+| `postgres-best-practices/` | Supabase rule set: 30 files on query performance, pooling, RLS, locking. |
+| `database-migration/` | Zero-downtime schema changes, backfills, rollbacks. |
+| `database-admin/` | Backups, roles, destructive-operation safety. |
+| `nosql-expert/` | DynamoDB, Cassandra, MongoDB modeling and audit. |
+| `prisma-expert/` | Projects using Prisma. |
+| `drizzle-orm-expert/` | Projects using Drizzle. |
+| `using-neon/` | Projects on Neon serverless Postgres. |
+
+## Example prompts
+
+### Improving an existing database
+
+**1. Full schema audit**
+
+> Audit the database layer of this repo. Read the Prisma schema and migrations, then list every missing foreign key, missing index on a filtered or FK column, nullable column that should be required, and type that should change (money, timestamps). Order by impact. For each, give the migration SQL. Do not edit files.
+
+**2. Slow query investigation**
+
+> The orders dashboard query in `src/queries/orders.ts` takes 4 seconds on 2M rows. Here is the `EXPLAIN (ANALYZE, BUFFERS)` output: [paste]. Tell me what the plan shows, which index or query change fixes it, and what it costs on writes.
+
+### Designing from scratch
+
+**3. Guided greenfield design**
+
+> I am building a multi-tenant SaaS for invoicing. Node and TypeScript, deploying to Vercel. Interview me for anything else you need, then recommend the database and ORM, design the schema with tenant isolation, and write the first migration.
+
+**4. Known requirements, skip the interview**
+
+> New project: event ticketing. Postgres on Neon, Drizzle, roughly 50 reads per write, bookings must never double-sell a seat. Design the schema. Use an exclusion constraint or equivalent for the seat-hold rule and explain the trade-off you chose for seat inventory under contention.
+
+### Mixed
+
+**5. Safe migration on live data**
+
+> We need to rename `users.fullname` to `users.display_name` and change `orders.total` from `FLOAT` to `NUMERIC(12,2)` without downtime. The app deploys continuously. Give me the migration sequence and the application changes needed at each step.
+
+**6. Should we leave Postgres?**
+
+> Our activity feed table grows 20M rows a day and feed reads are slowing down. Should this move to DynamoDB, be partitioned in Postgres, or something else? Ask what you need, then recommend one option with its operational cost.
+
+## Layout
 
 ```text
 db-architect-skills/
-├── AGENTS.md                                # Universal AI agent instructions & skill router
-├── README.md                                # Project documentation
-├── database/                                # Fundamentals (ACID, BASE, CAP, etc.)
-├── database-architect/                      # Core architect skill
-├── database-design/                         # Schema modeling
-├── database-migration/                      # Schema evolution
-├── database-admin/                          # Operations and security
-├── postgresql/                              # Postgres deep-dives
-├── postgres-best-practices/                 # Postgres tuning
-├── sql-pro/                                 # Raw SQL expertise
-├── nosql-expert/                            # Non-relational databases
-├── vector-database-engineer/                # AI and embedding databases
-├── prisma-expert/                           # Prisma ORM
-├── drizzle-orm-expert/                      # Drizzle ORM
-└── using-neon/                              # Serverless Postgres
+├── AGENTS.md                  # skill table, interview rule, boundaries
+├── README.md
+├── SKILL-AUDIT.md             # the audit that produced this layout
+├── database-architect/
+├── database-design/
+├── postgresql/
+├── postgres-best-practices/   # SKILL.md + rules/*.md
+├── database-migration/
+├── database-admin/
+├── nosql-expert/
+├── prisma-expert/
+├── drizzle-orm-expert/
+└── using-neon/
 ```
 
----
+## Adding to the set
 
-## 💡 Example Prompts for AI Agents
-
-**1. Codebase Audit & Refactoring:**
-> *"Scan my current repository, read my Drizzle ORM schema files, and identify any missing foreign key constraints or indexes. Propose the necessary migration script to fix them."*
-
-**2. Greenfield Project Design (Interactive Interview):**
-> *"I am starting a new multi-tenant SaaS application. Interview me to figure out whether we should use PostgreSQL with row-level security or a NoSQL database, and then help me design the initial schema."*
-
-**3. Performance Optimization:**
-> *"We are experiencing slow query times on the dashboard. Use your SQL Pro and Postgres Best Practices skills to analyze my query structure and suggest covering indexes or materialized views."*
-
-**4. Advanced Data Storage (AI/Vector):**
-> *"I need to add a semantic search feature to my app. Guide me on whether to use pgvector in my existing Postgres database or spin up a dedicated vector database like Pinecone."*
+Before adding a line, ask: can the model already do this on its own? If yes, leave it out. Add a line only for a project preference, a mistake the model keeps making, a hard boundary, or a pointer to live documentation. Keep each `SKILL.md` under 100 lines and give it a one-sentence `description` that says exactly when to read it; the description is what triggers the skill.

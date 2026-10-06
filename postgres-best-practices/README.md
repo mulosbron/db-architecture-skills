@@ -1,5 +1,7 @@
 # Postgres Best Practices - Contributor Guide
 
+> Note: the compiled `AGENTS.md` this upstream README describes has been removed from this copy. Agents read `SKILL.md` and the individual `rules/*.md` files instead.
+
 This repository contains Postgres performance optimization rules optimized for
 AI agents and LLMs.
 

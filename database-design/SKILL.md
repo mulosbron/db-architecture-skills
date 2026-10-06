@@ -1,86 +1,34 @@
 ---
 name: database-design
-description: "Database creation, auditing, and optimization framework for database-design. Use when building from scratch or detecting errors and anti-patterns."
-risk: safe
-source: community
-date_added: "2026-02-27"
+description: "Schema modeling and schema review: tables, keys, relationships, constraints, indexes, normalization. Use when designing a new schema or auditing an existing one for integrity and performance problems."
 ---
-## Agent Execution Flow (IMPORTANT)
-1. **Information Gathering:** Ask clarifying questions to determine context (greenfield vs existing), constraints, and requirements before proposing a solution.
-2. **Context Scanning:** Scan the workspace (`list_dir`, `view_file`) to understand current architecture, schemas, and code.
-3. **Analyze & Propose:** Once context is fully understood, formulate your architecture strategy or design pattern recommendation.
 
 # Database Design
 
-> **Learn to THINK, not copy SQL patterns.**
+## Audit checklist (existing schema)
 
-## 🎯 Selective Reading Rule
+Go through every table. Report each finding with table, column, impact, fix.
 
-**Read ONLY files relevant to the request!** Check the content map, find what you need.
+- **Primary keys**: every entity table has one. `BIGINT identity` by default; UUID only when IDs must be opaque or generated client-side.
+- **Foreign keys**: every reference is a real FK constraint, not just a column named `*_id`. FK columns are indexed (Postgres does not do this automatically).
+- **NOT NULL**: applied wherever the domain requires a value. Nullable columns that are never null in practice are a smell.
+- **UNIQUE / CHECK**: business rules (one email per user, status in a fixed set, quantity > 0) live in the database, not only in application code.
+- **Indexes**: exist for frequent filters, sorts, joins. Flag unused or duplicate indexes (they slow writes).
+- **Types**: money is `NUMERIC`, timestamps carry a time zone, strings are `TEXT` not `VARCHAR(255)` by habit.
+- **JSON columns**: holding data that is actually structured and queried. Pull it into columns.
+- **Soft deletes, audit columns, tenant_id**: present and consistent if the app needs them; indexed if filtered on.
+- **N+1 risk**: ORM relations loaded in loops. Check query logs or ORM `include` usage.
 
-| File | Description | When to Read |
-|------|-------------|--------------|
-| `database-selection.md` | PostgreSQL vs Neon vs Turso vs SQLite | Choosing database |
-| `orm-selection.md` | Drizzle vs Prisma vs Kysely | Choosing ORM |
-| `schema-design.md` | Normalization, PKs, relationships | Designing schema |
-| `indexing.md` | Index types, composite indexes | Performance tuning |
-| `optimization.md` | N+1, EXPLAIN ANALYZE | Query optimization |
-| `migrations.md` | Safe migrations, serverless DBs | Schema changes |
+## Design order (new schema)
 
----
+1. List the entities and the questions the app will ask (access patterns).
+2. Normalize to 3NF.
+3. Add constraints immediately, not "later".
+4. Index for the access patterns from step 1 and every FK.
+5. Write the first migration. Denormalize only after measuring.
 
-## ⚠️ Core Principle
+## Do not
 
-- ASK user for database preferences when unclear
-- Choose database/ORM based on CONTEXT
-- Don't default to PostgreSQL for everything
-
----
-
-## Decision Checklist
-
-Before designing schema:
-
-- [ ] Asked user about database preference?
-- [ ] Chosen database for THIS context?
-- [ ] Considered deployment environment?
-- [ ] Planned index strategy?
-- [ ] Defined relationship types?
-
----
-
-## Anti-Patterns
-
-❌ Default to PostgreSQL for simple apps (SQLite may suffice)
-❌ Skip indexing
-❌ Use SELECT * in production
-❌ Store JSON when structured data is better
-❌ Ignore N+1 queries
-
-## When to Use
-This skill is applicable to execute the workflow or actions described in the overview.
-
-
-## 🔍 Auditing Protocol
-When auditing database-design architecture or code:
-1. **Analyze Constraints**: Check if best practices are followed.
-2. **Identify Anti-patterns**: Look for performance bottlenecks or security flaws.
-3. **Validate Architecture**: Ensure the implementation aligns with domain requirements.
-
-## 🏗️ Creation Protocol
-When creating from scratch using database-design:
-1. **Plan Architecture**: Define the schema, types, and connections.
-2. **Enforce Security**: Apply least privilege and necessary rules.
-3. **Optimize**: Implement indexes or necessary performance tweaks early.
-
-## ✅ Validation Checklist
-- [ ] Requirements fully met.
-- [ ] Best practices for database-design applied.
-- [ ] No anti-patterns detected.
-
-## Limitations
-- Use this skill only when the task clearly matches the scope described above.
-- Do not treat the output as a substitute for environment-specific validation, testing, or expert review.
-- Stop and ask for clarification if required inputs, permissions, safety boundaries, or success criteria are missing.
-
-
+- Default to PostgreSQL without asking; SQLite may be enough.
+- Use `SELECT *` in application code.
+- Store relations as arrays or comma-separated strings when a junction table is needed.
